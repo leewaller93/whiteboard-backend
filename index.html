@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Development Strategy Whiteboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/babel-standalone@7.22.5/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    const App = () => {
+      const [phases, setPhases] = useState([]);
+      const [team, setTeam] = useState([]);
+      const [email, setEmail] = useState("");
+      const canvasRef = useRef(null);
+      let isDrawing = false;
+
+      // Fetch initial data
+      useEffect(() => {
+        fetchPhases();
+        fetchTeam();
+      }, []);
+
+      const fetchPhases = async () => {
+        const response = await fetch('http://localhost:5000/api/phases');
+        const data = await response.json();
+        setPhases([
+          { name: "Design", items: data.filter(item => item.phase === "Design") },
+          { name: "Development", items: data.filter(item => item.phase === "Development") },
+          { name: "Alpha Usage", items: data.filter(item => item.phase === "Alpha Usage") },
+          { name: "Beta Release (Web)", items: data.filter(item => item.phase === "Beta Release (Web)") },
+        ]);
+      };
+
+      const fetchTeam = async () => {
+        const response = await fetch('http://localhost:5000/api/team');
+        const data = await response.json();
+        setTeam(data);
+      };
+
+      // Whiteboard drawing
+      useEffect(() => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext("2d");
+        ctx.lineWidth = 2;
+        ctx.lineCap = "round";
+        ctx.strokeStyle = "black";
+
+        const startDrawing = (e) => {
+          isDrawing = true;
+          const { offsetX, offsetY } = e;
+          ctx.beginPath();
+          ctx.moveTo(offsetX, offsetY);
+        };
+
+        const draw = (e) => {
+          if (!isDrawing) return;
+          const { offsetX, offsetY } = e;
+          ctx.lineTo(offsetX, offsetY);
+          ctx.stroke();
+        };
+
+        const stopDrawing = () => {
+          isDrawing = false;
+          ctx.closePath();
+        };
+
+        canvas.addEventListener("mousedown", startDrawing);
+        canvas.addEventListener("mousemove", draw);
+        canvas.addEventListener("mouseup", stopDrawing);
+        canvas.addEventListener("mouseout", stopDrawing);
+
+        return () => {
+          canvas.removeEventListener("mousedown", startDrawing);
+          canvas.removeEventListener("mousemove", draw);
+          canvas.removeEventListener("mouseup", stopDrawing);
+          canvas.removeEventListener("mouseout", stopDrawing);
+        };
+      }, []);
+
+      const clearCanvas = () => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      };
+
+      const addTeamMember = async () => {
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          alert('Please enter a valid email');
+          return;
+        }
+        const response = await fetch('http://localhost:5000/api/invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        if (response.ok) {
+          fetchTeam();
+          setEmail("");
+        } else {
+          alert('Failed to send invitation');
+        }
+      };
+
+      const updatePhaseItem = async (id, phase, updatedItem) => {
+        const response = await fetch(`http://localhost:5000/api/phases/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...updatedItem, phase }),
+        });
+        if (response.ok) {
+          fetchPhases();
+        }
+      };
+
+      const addPhaseItem = async (phase) => {
+        const response = await fetch('http://localhost:5000/api/phases', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phase,
+            goal: '',
+            need: '',
+            comments: '',
+            execute: 'N',
+            stage: 'review',
+            commentArea: '',
+          }),
+        });
+        if (response.ok) {
+          fetchPhases();
+        }
+      };
+
+      return (
+        <div className="p-4 max-w-7xl mx-auto">
+          <h1 className="text-2xl font-bold mb-4">Development Strategy Whiteboard</h1>
+          
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold mb-2">Whiteboard</h2>
+            <canvas ref={canvasRef} width={800} height={400} className="border border-gray-300 mb-2"></canvas>
+            <button
+              onClick={clearCanvas}
+              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+            >
+              Clear Whiteboard
+            </button>
+          </div>
+
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold mb-2">Invite Team Member</h2>
+            <div className="flex space-x-2">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter email"
+                className="border border-gray-300 p-2 rounded w-full"
+              />
+              <button
+                onClick={addTeamMember}
+                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+              >
+                Send Invite
+              </button>
+            </div>
+            <div className="mt-2">
+              <h3 className="font-semibold">Team Members:</h3>
+              <ul className="list-disc pl-5">
+                {team.map((member) => (
+                  <li key={member.id}>{member.initials} ({member.email})</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {phases.map((phase) => (
+            <div key={phase.name} className="mb-6">
+              <h2 className="text-xl font-semibold mb-2">{phase.name}</h2>
+              <table className="w-full border-collapse border border-gray-300">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="border border-gray-300 p-2">Goal</th>
+                    <th className="border border-gray-300 p-2">Need</th>
+                    <th className="border border-gray-300 p-2">Comments</th>
+                    <th className="border border-gray-300 p-2">Execute</th>
+                    <th className="border border-gray-300 p-2">Stage</th>
+                    <th className="border border-gray-300 p-2">Comment Area</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {phase.items.map((item) => (
+                    <tr key={item.id}>
+                      <td className="border border-gray-300 p-2">
+                        <input
+                          type="text"
+                          value={item.goal}
+                          onChange={(e) => updatePhaseItem(item.id, phase.name, { ...item, goal: e.target.value })}
+                          className="w-full p-1"
+                        />
+                      </td>
+                      <td className="border border-gray-300 p-2">
+                        <input
+                          type="text"
+                          value={item.need}
+                          onChange={(e) => updatePhaseItem(item.id, phase.name, { ...item, need: e.target.value })}
+                          className="w-full p-1"
+                        />
+                      </td>
+                      <td className="border border-gray-300 p-2">
+                        <input
+                          type="text"
+                          value={item.comments}
+                          onChange={(e) => updatePhaseItem(item.id, phase.name, { ...item, comments: e.target.value })}
+                          className="w-full p-1"
+                        />
+                      </td>
+                      <td className="border border-gray-300 p-2">
+                        <select
+                          value={item.execute}
+                          onChange={(e) => updatePhaseItem(item.id, phase.name, { ...item, execute: e.target.value })}
+                          className="w-full p-1"
+                        >
+                          <option value="Y">Y</option>
+                          <option value="N">N</option>
+                        </select>
+                      </td>
+                      <td className="border border-gray-300 p-2">
+                        <select
+                          value={item.stage}
+                          onChange={(e) => updatePhaseItem(item.id, phase.name, { ...item, stage: e.target.value })}
+                          className="w-full p-1"
+                        >
+                          <option value="review">Review</option>
+                          <option value="in dev">In Dev</option>
+                          <option value="testing">Testing</option>
+                          <option value="complete">Complete</option>
+                          <option value="released">Released</option>
+                        </select>
+                      </td>
+                      <td className="border border-gray-300 p-2">
+                        <textarea
+                          value={item.commentArea}
+                          onChange={(e) => updatePhaseItem(item.id, phase.name, { ...item, commentArea: e.target.value })}
+                          className="w-full p-1"
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <button
+                onClick={() => addPhaseItem(phase.name)}
+                className="mt-2 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+              >
+                Add Item
+              </button>
+            </div>
+          ))}
+        </div>
+      );
+    };
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html> 
