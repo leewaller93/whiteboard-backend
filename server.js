@@ -99,11 +99,13 @@ app.put('/api/phases/:id', (req, res) => {
 // Delete a phase by id
 app.delete('/api/phases/:id', (req, res) => {
   const { id } = req.params;
+  console.log('DELETE /api/phases/:id called with id:', id);
   db.run('DELETE FROM phases WHERE id = ?', [id], function (err) {
     if (err) {
       res.status(500).json({ error: err.message });
       return;
     }
+    console.log('Rows deleted:', this.changes);
     if (this.changes === 0) {
       res.status(404).json({ error: 'Task not found' });
       return;
