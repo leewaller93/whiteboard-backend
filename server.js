@@ -45,6 +45,39 @@ db.serialize(() => {
   db.run(`INSERT INTO phases (phase, goal, need, comments, execute, stage, commentArea, assigned_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, initialPhases[4]);
 });
 
+// --- Whiteboard State Table and Endpoints ---
+db.serialize(() => {
+  db.run(`CREATE TABLE IF NOT EXISTS whiteboard_state (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    state_json TEXT
+  )`);
+  // Ensure a row always exists
+  db.run(`INSERT OR IGNORE INTO whiteboard_state (id, state_json) VALUES (1, '{}')`);
+});
+
+// Get the latest whiteboard state
+app.get('/api/whiteboard', (req, res) => {
+  db.get('SELECT state_json FROM whiteboard_state WHERE id = 1', (err, row) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json(row ? JSON.parse(row.state_json) : {});
+  });
+});
+
+// Save the latest whiteboard state
+app.post('/api/whiteboard', (req, res) => {
+  const stateJson = JSON.stringify(req.body);
+  db.run('UPDATE whiteboard_state SET state_json = ? WHERE id = 1', [stateJson], function (err) {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json({ success: true });
+  });
+});
+
 // Nodemailer Configuration
 const transporter = nodemailer.createTransport({
   service: 'gmail',
