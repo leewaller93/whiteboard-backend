@@ -96,6 +96,22 @@ app.put('/api/phases/:id', (req, res) => {
   );
 });
 
+// Delete a phase by id
+app.delete('/api/phases/:id', (req, res) => {
+  const { id } = req.params;
+  db.run('DELETE FROM phases WHERE id = ?', [id], function (err) {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    if (this.changes === 0) {
+      res.status(404).json({ error: 'Task not found' });
+      return;
+    }
+    res.json({ deleted: this.changes });
+  });
+});
+
 app.get('/api/team', (req, res) => {
   db.all('SELECT * FROM team', (err, rows) => {
     if (err) {
