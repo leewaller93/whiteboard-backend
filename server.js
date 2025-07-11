@@ -9,7 +9,7 @@ app.use(cors());
 app.use(express.json());
 
 // SQLite Database Setup
-const db = new sqlite3.Database(':memory:');
+const db = new sqlite3.Database('whiteboard.db');
 
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS phases (
@@ -28,6 +28,19 @@ db.serialize(() => {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT,
     email TEXT
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS project (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT
+  )`);
+
+  // Ensure whiteboard table exists
+  db.run(`CREATE TABLE IF NOT EXISTS whiteboard (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    canvasImage TEXT,
+    stickyNotes TEXT,
+    updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
   // Insert initial phase data
@@ -76,6 +89,42 @@ app.post('/api/whiteboard', (req, res) => {
     }
     res.json({ success: true });
   });
+});
+
+// Add endpoints for saving and loading whiteboard state
+app.post('/api/whiteboard/save', (req, res) => {
+  const { canvasImage, stickyNotes } = req.body;
+  if (!canvasImage || !stickyNotes) {
+    return res.status(400).json({ error: 'Missing canvasImage or stickyNotes' });
+  }
+  db.run(
+    'INSERT INTO whiteboard (canvasImage, stickyNotes) VALUES (?, ?)',
+    [canvasImage, JSON.stringify(stickyNotes)],
+    function (err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      res.json({ saved: true, id: this.lastID });
+    }
+  );
+});
+
+app.get('/api/whiteboard/latest', (req, res) => {
+  db.get(
+    'SELECT canvasImage, stickyNotes FROM whiteboard ORDER BY updatedAt DESC, id DESC LIMIT 1',
+    (err, row) => {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      if (!row) {
+        return res.json({ canvasImage: null, stickyNotes: [] });
+      }
+      res.json({
+        canvasImage: row.canvasImage,
+        stickyNotes: JSON.parse(row.stickyNotes)
+      });
+    }
+  );
 });
 
 // Nodemailer Configuration
