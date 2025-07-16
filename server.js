@@ -12,6 +12,7 @@ app.use(express.json());
 const db = new sqlite3.Database('whiteboard.db');
 
 db.serialize(() => {
+  console.log('--- DB SEEDING START ---');
   db.run(`CREATE TABLE IF NOT EXISTS phases (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     phase TEXT,
@@ -22,7 +23,7 @@ db.serialize(() => {
     stage TEXT,
     commentArea TEXT,
     assigned_to TEXT
-  )`);
+  )`, (err) => { if (err) console.error('Error creating phases table:', err); else console.log('Phases table ready'); });
 
   db.run(`CREATE TABLE IF NOT EXISTS team (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,24 +31,23 @@ db.serialize(() => {
     email TEXT,
     org TEXT DEFAULT 'PHG',
     not_working INTEGER DEFAULT 0
-  )`);
+  )`, (err) => { if (err) console.error('Error creating team table:', err); else console.log('Team table ready'); });
 
   db.run(`CREATE TABLE IF NOT EXISTS project (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT
-  )`);
+  )`, (err) => { if (err) console.error('Error creating project table:', err); else console.log('Project table ready'); });
 
-  // Ensure whiteboard table exists
   db.run(`CREATE TABLE IF NOT EXISTS whiteboard (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     canvasImage TEXT,
     stickyNotes TEXT,
     updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
+  )`, (err) => { if (err) console.error('Error creating whiteboard table:', err); else console.log('Whiteboard table ready'); });
 
   // --- CLEAR EXISTING DATA ---
-  db.run('DELETE FROM phases');
-  db.run('DELETE FROM team');
+  db.run('DELETE FROM phases', (err) => { if (err) console.error('Error clearing phases:', err); else console.log('Phases cleared'); });
+  db.run('DELETE FROM team', (err) => { if (err) console.error('Error clearing team:', err); else console.log('Team cleared'); });
 
   // --- INSERT DEMO TEAM MEMBERS ---
   const demoTeam = [
@@ -57,7 +57,10 @@ db.serialize(() => {
     ['David Kim', 'david.kim@demo.com', 'PHG']
   ];
   for (const member of demoTeam) {
-    db.run(`INSERT INTO team (username, email, org) VALUES (?, ?, ?)`, member);
+    db.run(`INSERT INTO team (username, email, org) VALUES (?, ?, ?)`, member, (err) => {
+      if (err) console.error('Error inserting team member:', member, err);
+      else console.log('Inserted team member:', member[0]);
+    });
   }
 
   // --- INSERT DEMO TASKS ---
@@ -80,8 +83,12 @@ db.serialize(() => {
     ['Resolved', 'Accrual Reversal Entries', '', 'Post reversing entries for prior month’s accruals (e.g., paid invoices, settled claims) to prevent double-counting in the ledger.', 'Monthly', 'Resolved', '', 'David Kim']
   ];
   for (const task of demoTasks) {
-    db.run(`INSERT INTO phases (phase, goal, need, comments, execute, stage, commentArea, assigned_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, task);
+    db.run(`INSERT INTO phases (phase, goal, need, comments, execute, stage, commentArea, assigned_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, task, (err) => {
+      if (err) console.error('Error inserting task:', task[1], err);
+      else console.log('Inserted task:', task[1]);
+    });
   }
+  console.log('--- DB SEEDING END ---');
 });
 
 // --- Whiteboard State Table and Endpoints ---
