@@ -76,7 +76,7 @@ To run and test the project locally (without deployment):
 1. **Commit and push your backend changes (including demo data) in `has-status-backend`.**
 2. **Update the submodule reference in the main repo and push.**
 3. **The backend will be automatically redeployed on Render via Deploy Hook.**
-4. **If you changed the frontend, run `npm run deploy` in the main project directory.**
+4. **The frontend will always be deployed (`npm run deploy`) as part of the Lee Rule.**
 5. **Verify the backend endpoint and public frontend.**
 
 **Any developer can do this—no guesswork, no missed steps.**
@@ -91,7 +91,7 @@ bash deploy-lee-rule.sh
 ```
 
 - **Note:** You must be logged in to git and have push access. The backend deploy is now fully automated—no need to visit the Render dashboard.
-- **After running this script,** your demo data and code will be live for everyone.
+- **After running this script,** your demo data and code will be live for everyone. The frontend will always be deployed.
 
 ### Windows Users: PowerShell Alternative
 If you are on Windows and do not have bash, copy and paste these commands into PowerShell:
@@ -106,7 +106,7 @@ git add has-status-backend
 git commit -m "Update backend submodule ref for redeploy"
 git push
 curl.exe -fsSL "https://api.render.com/deploy/srv-d1rbgqm3jp1c73bm52i0?key=f1_fTd-OeYk"
-# If you changed the frontend:
+# Deploy frontend:
 npm run deploy
 ```
 
