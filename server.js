@@ -160,6 +160,27 @@ app.get('/api/whiteboard/latest', (req, res) => {
   );
 });
 
+// Save or update the project/hospital name
+app.post('/api/project', (req, res) => {
+  const { name } = req.body;
+  db.run(
+    'INSERT OR REPLACE INTO project (id, name) VALUES (1, ?)',
+    [name],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true });
+    }
+  );
+});
+
+// Get the project/hospital name
+app.get('/api/project', (req, res) => {
+  db.get('SELECT name FROM project WHERE id = 1', (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ name: row ? row.name : "" });
+  });
+});
+
 // Nodemailer Configuration
 const transporter = nodemailer.createTransport({
   service: 'gmail',
