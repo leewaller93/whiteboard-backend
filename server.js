@@ -38,6 +38,7 @@ const TeamSchema = new mongoose.Schema({
 const Team = mongoose.model('Team', TeamSchema);
 
 const ProjectSchema = new mongoose.Schema({
+  _id: { type: Number, default: 1 },
   name: String
 });
 const Project = mongoose.model('Project', ProjectSchema);
@@ -90,7 +91,7 @@ async function seedDemoData() {
     console.log('Demo phases seeded');
   }
   if ((await Project.countDocuments()) === 0) {
-    await Project.create({ name: '' });
+    await Project.create({ _id: 1, name: '' });
     console.log('Demo project seeded');
   }
   if ((await WhiteboardState.countDocuments()) === 0) {
@@ -148,7 +149,7 @@ app.get('/api/whiteboard/latest', async (req, res) => {
 app.post('/api/project', async (req, res) => {
   const { name } = req.body;
   try {
-    await Project.findOneAndUpdate({}, { name }, { upsert: true });
+    await Project.findByIdAndUpdate(1, { name }, { upsert: true });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -157,7 +158,7 @@ app.post('/api/project', async (req, res) => {
 
 app.get('/api/project', async (req, res) => {
   try {
-    const project = await Project.findOne();
+    const project = await Project.findById(1);
     res.json({ name: project ? project.name : '' });
   } catch (err) {
     res.status(500).json({ error: err.message });
