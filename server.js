@@ -27,7 +27,9 @@ db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS team (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT,
-    email TEXT
+    email TEXT,
+    org TEXT DEFAULT 'PHG',
+    not_working INTEGER DEFAULT 0
   )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS project (
@@ -43,19 +45,43 @@ db.serialize(() => {
     updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
-  // Insert initial phase data
-  const initialPhases = [
-    ['Design', 'Define UI/UX', 'Wireframes', 'Use Figma', 'Y', 'review', '', 'team'],
-    ['Design', 'Plan architecture', 'Tech stack', 'React + Node.js', 'N', 'in dev', '', 'team'],
-    ['Development', 'Build frontend', 'React setup', 'Use Tailwind', 'Y', 'in dev', '', 'team'],
-    ['Alpha Usage', 'Test core features', 'User feedback', 'Internal testers', 'N', 'testing', '', 'team'],
-    ['Beta Release (Web)', 'Public beta', 'Hosting', 'AWS deploy', 'N', 'review', '', 'team']
+  // --- CLEAR EXISTING DATA ---
+  db.run('DELETE FROM phases');
+  db.run('DELETE FROM team');
+
+  // --- INSERT DEMO TEAM MEMBERS ---
+  const demoTeam = [
+    ['Alice Johnson', 'alice.johnson@demo.com', 'PHG'],
+    ['Bob Smith', 'bob.smith@demo.com', 'PHG'],
+    ['Carol Lee', 'carol.lee@demo.com', 'PHG'],
+    ['David Kim', 'david.kim@demo.com', 'PHG']
   ];
-  db.run(`INSERT INTO phases (phase, goal, need, comments, execute, stage, commentArea, assigned_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, initialPhases[0]);
-  db.run(`INSERT INTO phases (phase, goal, need, comments, execute, stage, commentArea, assigned_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, initialPhases[1]);
-  db.run(`INSERT INTO phases (phase, goal, need, comments, execute, stage, commentArea, assigned_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, initialPhases[2]);
-  db.run(`INSERT INTO phases (phase, goal, need, comments, execute, stage, commentArea, assigned_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, initialPhases[3]);
-  db.run(`INSERT INTO phases (phase, goal, need, comments, execute, stage, commentArea, assigned_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, initialPhases[4]);
+  for (const member of demoTeam) {
+    db.run(`INSERT INTO team (username, email, org) VALUES (?, ?, ?)`, member);
+  }
+
+  // --- INSERT DEMO TASKS ---
+  const demoTasks = [
+    ['Outstanding', 'General Ledger Review', '', 'Audit the hospital’s existing general ledger to verify account balances, identify errors, and ensure GAAP compliance.', 'One-Time', 'Outstanding', '', 'Alice Johnson'],
+    ['Outstanding', 'Accrual Process Assessment', '', 'Evaluate current accrual methods for revenue (e.g., unbilled patient services) and expenses (e.g., utilities, salaries) for accuracy and consistency.', 'One-Time', 'Outstanding', '', 'Bob Smith'],
+    ['Outstanding', 'Chart of Accounts Validation', '', 'Review and align the hospital’s chart of accounts to ensure proper categorization for journal entries and financial reporting.', 'One-Time', 'Outstanding', '', 'Carol Lee'],
+    ['Outstanding', 'Prior Period Entry Analysis', '', 'Examine historical journal entries to identify recurring issues or misclassifications, preparing correcting entries as needed.', 'One-Time', 'Outstanding', '', 'David Kim'],
+    ['Outstanding', 'Financial Statement Baseline Review', '', 'Assess prior financial statements (balance sheet, income statement, cash flow statement) to establish a baseline for ongoing preparation and ensure compliance with GAAP and HIPAA.', 'One-Time', 'Outstanding', '', 'Alice Johnson'],
+    ['In Process', 'Revenue Accrual Entries', '', 'Post journal entries for accrued revenue from unbilled patient services, using patient encounter data and estimated insurance reimbursements.', 'Weekly', 'In Process', '', 'Bob Smith'],
+    ['In Process', 'Expense Accrual Entries', '', 'Record accrued expenses for incurred but unpaid costs (e.g., utilities, vendor services) based on historical data or pending invoices.', 'Weekly', 'In Process', '', 'Carol Lee'],
+    ['In Process', 'Cash Receipt Journal Entries', '', 'Log journal entries for cash receipts from patients or insurers, debiting cash and crediting revenue or accounts receivable.', 'Weekly', 'In Process', '', 'David Kim'],
+    ['In Process', 'Preliminary Journal Review', '', 'Review weekly journal entries for correct account coding, completeness, and supporting documentation (e.g., payment records).', 'Weekly', 'In Process', '', 'Alice Johnson'],
+    ['In Process', 'Adjusting Entry Corrections', '', 'Prepare and post adjusting entries to correct errors or discrepancies identified during weekly general ledger reviews.', 'Weekly', 'In Process', '', 'Bob Smith'],
+    ['Review/Discussion', 'Month-End Accrual Finalization', '', 'Finalize and post accrual entries for revenue (e.g., unbilled procedures, pending claims) and expenses (e.g., salaries, leases) to align with GAAP.', 'Monthly', 'Review/Discussion', '', 'Carol Lee'],
+    ['Review/Discussion', 'Depreciation Journal Entries', '', 'Record monthly depreciation entries for hospital assets (e.g., medical equipment, facilities) using established schedules.', 'Monthly', 'Review/Discussion', '', 'David Kim'],
+    ['Review/Discussion', 'Prepaid Expense Amortization', '', 'Post journal entries to amortize prepaid expenses (e.g., insurance, software licenses) over their applicable periods.', 'Monthly', 'Review/Discussion', '', 'Alice Johnson'],
+    ['Resolved', 'Financial Statement Preparation', '', 'Prepare monthly financial statements (balance sheet, income statement, cash flow statement) using journal entry data, ensuring accuracy and GAAP compliance.', 'Monthly', 'Resolved', '', 'Bob Smith'],
+    ['Resolved', 'Comprehensive Ledger and Financial Review', '', 'Conduct a detailed review of all monthly journal entries and financial statements, verifying accuracy, accrual integrity, and compliance with GAAP and HIPAA.', 'Monthly', 'Resolved', '', 'Carol Lee'],
+    ['Resolved', 'Accrual Reversal Entries', '', 'Post reversing entries for prior month’s accruals (e.g., paid invoices, settled claims) to prevent double-counting in the ledger.', 'Monthly', 'Resolved', '', 'David Kim']
+  ];
+  for (const task of demoTasks) {
+    db.run(`INSERT INTO phases (phase, goal, need, comments, execute, stage, commentArea, assigned_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, task);
+  }
 });
 
 // --- Whiteboard State Table and Endpoints ---
@@ -196,6 +222,7 @@ app.delete('/api/phases/:id', (req, res) => {
   });
 });
 
+// Update team endpoints to support org and not_working
 app.get('/api/team', (req, res) => {
   db.all('SELECT * FROM team', (err, rows) => {
     if (err) {
@@ -207,17 +234,72 @@ app.get('/api/team', (req, res) => {
 });
 
 app.post('/api/invite', (req, res) => {
-  const { username, email } = req.body;
+  const { username, email, org } = req.body;
   if (!username || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     res.status(400).json({ error: 'Invalid username or email' });
     return;
   }
-  db.run('INSERT INTO team (username, email) VALUES (?, ?)', [username, email], function (err) {
+  db.run('INSERT INTO team (username, email, org) VALUES (?, ?, ?)', [username, email, org || 'PHG'], function (err) {
     if (err) {
       res.status(500).json({ error: err.message });
       return;
     }
     res.json({ message: 'User added', username });
+  });
+});
+
+// Mark team member as not working and reassign tasks
+app.patch('/api/team/:id/not-working', (req, res) => {
+  const { id } = req.params;
+  const { reassign_to } = req.body;
+  db.get('SELECT username FROM team WHERE id = ?', [id], (err, member) => {
+    if (err || !member) {
+      res.status(404).json({ error: 'Team member not found' });
+      return;
+    }
+    // Reassign all tasks
+    db.run('UPDATE phases SET assigned_to = ? WHERE assigned_to = ?', [reassign_to || 'team', member.username], function (err2) {
+      if (err2) {
+        res.status(500).json({ error: err2.message });
+        return;
+      }
+      // Mark as not working
+      db.run('UPDATE team SET not_working = 1 WHERE id = ?', [id], function (err3) {
+        if (err3) {
+          res.status(500).json({ error: err3.message });
+          return;
+        }
+        res.json({ updated: true });
+      });
+    });
+  });
+});
+
+// Delete team member only if not assigned to any tasks
+app.delete('/api/team/:id', (req, res) => {
+  const { id } = req.params;
+  db.get('SELECT username FROM team WHERE id = ?', [id], (err, member) => {
+    if (err || !member) {
+      res.status(404).json({ error: 'Team member not found' });
+      return;
+    }
+    db.get('SELECT COUNT(*) as count FROM phases WHERE assigned_to = ?', [member.username], (err2, row) => {
+      if (err2) {
+        res.status(500).json({ error: err2.message });
+        return;
+      }
+      if (row.count > 0) {
+        res.status(400).json({ error: 'Cannot delete: member is assigned to tasks' });
+        return;
+      }
+      db.run('DELETE FROM team WHERE id = ?', [id], function (err3) {
+        if (err3) {
+          res.status(500).json({ error: err3.message });
+          return;
+        }
+        res.json({ deleted: true });
+      });
+    });
   });
 });
 
