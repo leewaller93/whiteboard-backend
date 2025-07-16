@@ -9,7 +9,7 @@ app.use(cors());
 app.use(express.json());
 
 // SQLite Database Setup
-const db = new sqlite3.Database('whiteboard.db');
+const db = new sqlite3.Database('/data/whiteboard.db');
 
 db.serialize(() => {
   console.log('--- DB SEEDING START ---');
