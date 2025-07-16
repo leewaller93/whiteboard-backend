@@ -5,7 +5,7 @@ const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 
 const app = express();
-app.use(cors());
+app.use(cors({ origin: 'https://leewaller93.github.io' }));
 app.use(express.json());
 
 // SQLite Database Setup
